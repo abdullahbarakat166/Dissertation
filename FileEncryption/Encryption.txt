@@ -1,0 +1,52 @@
+ÝXJòóÕµˆPMÂ‘’î÷e you're encountering, System.UnauthorizedAccessException: 'Access to the path 'c:\encrypted.key' is denied.', indicates that your application doesn't have permission to write to the specified path. This is likely because writing directly to the root directory of the C drive requires elevated privileges.
+
+To resolve this issue, you have a few options:
+
+Change the Output Path: Instead of trying to write directly to c:\encrypted.key, consider writing to a location within the user's directory where your application has write permissions. You could use something like Environment.SpecialFolder.MyDocuments to get a suitable directory.
+
+Run as Administrator: You can run Visual Studio as administrator which would give your application the necessary permissions to write to the root directory. Right-click on Visual Studio shortcut and choose "Run as administrator".
+
+Adjust Permissions: You could adjust the permissions of the directory C:\ to allow write access for the user running the application, but this is generally not recommended as it poses security risks.
+
+Here's an example of how you might modify your code to use the user's documents directory:
+
+csharp
+Copy code
+private void btnEncrypt_Click(object sender, EventArgs e)
+{
+    //Create a filestream that opens the path of the text file
+    using (FileStream fsOut = File.Open(txtFile.Text, FileMode.Open))
+    {
+        // uses the TripleDES encryption
+        using (TripleDESCryptoServiceProvider tdes = new TripleDESCryptoServiceProvider())
+        {
+            //links data streams to cryptographic transformations of the text file.
+            using (CryptoStream cs = new CryptoStream(fsOut, tdes.CreateEncryptor(), CryptoStreamMode.Write))
+            {
+                // instantiate a StreamWriter to write on the textfile
+                using (StreamWriter sw = new StreamWriter(cs))
+                {
+                    //write content of the text file
+                    sw.WriteLine("Encrypted");
+                }
+            }
+        }
+    }
+
+    // Get the user's documents directory
+    string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+    string keyFilePath = Path.Combine(documentsPath, "encrypted.key");
+
+    //create a key to as a registry entry
+    using (FileStream fsKeyOut = File.Create(keyFilePath))
+    {
+        //create a binary writer to a stream that supports writing strings in a specific encoding.
+        using (BinaryWriter bw = new BinaryWriter(fsKeyOut))
+        {
+            //write the key using BinaryWriter
+            bw.Write(tdes.Key);
+            bw.Write(tdes.IV);
+        }
+    }
+}
+This code will write the encrypted key file to the user's documents directory, where your application should have appropriate permissions to write without encountering an access denied error.
